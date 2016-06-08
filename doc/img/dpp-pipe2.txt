@@ -1,7 +1,7 @@
 digraph {
     rankdir = LR
     INPUT [label="input documents" shape=folder color=blue]
-    PP [label=pp shape=diamond]
+    PP [label=gpp shape=diamond]
     DPP [label=dpp shape=diamond]
     PANDOC [label=pandoc shape=diamond]
     IMG [label="images" shape=folder color=blue]

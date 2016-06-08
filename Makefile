@@ -1,21 +1,21 @@
-# PP
+# DPP
 # Copyright (C) 2015, 2016 Christophe Delord
-# http://www.cdsoft.fr/pp
+# http://www.cdsoft.fr/dpp
 #
-# This file is part of PP.
+# This file is part of DPP.
 #
-# PP is free software: you can redistribute it and/or modify
+# DPP is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
 #
-# PP is distributed in the hope that it will be useful,
+# DPP is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with PP.  If not, see <http://www.gnu.org/licenses/>.
+# along with DPP.  If not, see <http://www.gnu.org/licenses/>.
 
 #####################################################################
 # Platform detection
@@ -27,30 +27,26 @@ GHCOPT = -Wall -Werror -O2
 
 ifeq "$(OS)" "Linux"
 
-PP 	= pp
 DPP = dpp
 GPP = gpp
 
-all: gpp pp dpp README.md pp-linux-$(shell uname -m).txz
-all: pp.tgz
-all: doc/gpp.html doc/pp.html doc/dpp.html
+all: gpp dpp README.md
+all: dpp.tgz
+all: doc/gpp.html doc/dpp.html
 
-ifneq "$(shell wine ghc --version 2>/dev/null || false)" ""
-all: gpp.exe pp.exe dpp.exe pp-win.7z
+all: gpp.exe dpp.exe
 
 CCWIN = i686-w64-mingw32-gcc
 WINE = wine
-endif
 
 else
 ifeq "$(OS)" "MINGW32_NT-6.1"
 
-PP 	= pp.exe
 DPP = dpp.exe
 GPP = gpp.exe
 
-all: gpp.exe pp.exe dpp.exe
-all: doc/gpp.html doc/pp.html doc/dpp.html
+all: gpp.exe dpp.exe
+all: doc/gpp.html doc/dpp.html
 
 CCWIN = gcc
 WINE =
@@ -58,12 +54,11 @@ WINE =
 else
 ifeq "$(OS)" "CYGWIN_NT-6.1-WOW"
 
-PP 	= pp.exe
 DPP = dpp.exe
 GPP = gpp.exe
 
-all: gpp.exe pp.exe dpp.exe
-all: doc/gpp.html doc/pp.html doc/dpp.html
+all: gpp.exe dpp.exe
+all: doc/gpp.html doc/dpp.html
 
 CCWIN = mingw32-gcc
 WINE =
@@ -77,21 +72,13 @@ endif
 BUILD = .build
 CACHE = .cache
 
-install: $(PP) $(DPP) $(GPP)
+install: $(DPP) $(GPP)
 	install -v -C $^ $(shell (ls -d /usr/local/bin || echo /usr/bin) 2>/dev/null)
 
 clean:
 	rm -rf $(BUILD) doc
-	rm -f gpp gpp.exe pp pp.exe dpp dpp.exe
-	rm -f pp.tgz pp-win.7z pp-linux-*.txz
-
-dep:
-	cabal update
-	cabal install strict temporary
-ifneq "$(WINE)" ""
-	$(WINE) cabal update
-	$(WINE) cabal install strict temporary
-endif
+	rm -f gpp gpp.exe dpp dpp.exe
+	rm -f dpp.tgz
 
 .DELETE_ON_ERROR:
 
@@ -99,23 +86,17 @@ endif
 # README
 #####################################################################
 
-README.md: $(PP)
-README.md: src/pp.md
+README.md: $(GPP) $(DPP)
+README.md: src/dpp.md
 	@mkdir -p doc/img
-	./$(PP) -en -DREADME $< | pandoc -f markdown -t markdown_github > $@
+	./$(GPP) -T -x $< | ./$(DPP) | pandoc -f markdown -t markdown_github > $@
 
 #####################################################################
 # archives
 #####################################################################
 
-pp.tgz: Makefile $(wildcard src/*) $(wildcard test/*) README.md LICENSE .gitignore
+dpp.tgz: Makefile $(wildcard src/*) README.md LICENSE .gitignore
 	tar -czf $@ $^
-
-pp-win.7z: gpp.exe pp.exe dpp.exe doc/gpp.html doc/pp.html doc/dpp.html
-	7z -mx9 a $@ $^
-
-pp-linux-%.txz: gpp pp dpp doc/gpp.html doc/pp.html doc/dpp.html
-	tar cJf $@ $^
 
 #####################################################################
 # GPP
@@ -159,10 +140,10 @@ DITAA = ditaa0_9
 DITAA_URL = http://freefr.dl.sourceforge.net/project/ditaa/ditaa/$(DITAA_VERSION)/$(DITAA).zip
 
 $(BUILD)/%.o: $(BUILD)/%.c
-	ghc $(GHCOPT) -c -o $@ $^
+	gcc -c -o $@ $^
 
 $(BUILD)/%-win.o: $(BUILD)/%.c
-	$(WINE) ghc $(GHCOPT) -c -o $@ $^
+	$(CCWIN) -c -o $@ $^
 
 $(BUILD)/%.c: $(CACHE)/%.jar
 	@mkdir -p $(dir $@)
@@ -181,34 +162,9 @@ $(CACHE)/$(DITAA).jar: $(CACHE)/$(DITAA).zip
 	unzip $< $(notdir $@) -d $(dir $@)
 	@touch $@
 
-$(CACHE)/pp.css:
+$(CACHE)/dpp.css:
 	@mkdir -p $(dir $@)
 	wget http://cdsoft.fr/cdsoft.css -O $@
-
-#####################################################################
-# PP
-#####################################################################
-
-pp: BUILDPP=$(BUILD)/$@
-pp: src/pp.hs $(BUILD)/$(PLANTUML).o $(BUILD)/$(DITAA).o
-	@mkdir -p $(BUILDPP)
-	ghc $(GHCOPT) -odir $(BUILDPP) -hidir $(BUILDPP) -o $@ $^
-	@strip $@
-
-pp.exe: BUILDPP=$(BUILD)/$@
-pp.exe: src/pp.hs $(BUILD)/$(PLANTUML)-win.o $(BUILD)/$(DITAA)-win.o
-	@mkdir -p $(BUILDPP)
-	$(WINE) ghc $(GHCOPT) -odir $(BUILDPP) -hidir $(BUILDPP) -o $@ $^
-	@strip $@
-
-doc/pp.html: $(PP) doc/pp.css
-doc/pp.html: src/pp.md
-	@mkdir -p $(dir $@) doc/img
-	./$(PP) -en $< | pandoc -S --toc --self-contained -c doc/pp.css -f markdown -t html5 > $@
-
-doc/pp.css: $(CACHE)/pp.css
-	@mkdir -p $(dir $@)
-	cp $< $@
 
 #####################################################################
 # DPP
@@ -222,26 +178,12 @@ dpp.exe: src/dpp.c $(BUILD)/$(PLANTUML)-win.o $(BUILD)/$(DITAA)-win.o
 	$(CCWIN) -Werror -Wall $^ -o $@
 	@strip $@
 
-doc/dpp.html: $(PP) $(DPP) doc/pp.css
+doc/dpp.html: $(GPP) $(DPP) doc/dpp.css
 doc/dpp.html: src/dpp.md
 	@mkdir -p $(dir $@) doc/img
-	./$(PP) -en $< | ./$(DPP) | pandoc -S --toc --self-contained -c doc/pp.css -f markdown -t html5 > $@
+	./$(GPP) -T -x $< | ./$(DPP) | pandoc -S --toc --self-contained -c doc/dpp.css -f markdown -t html5 > $@
 
-#####################################################################
-# tests
-#####################################################################
+doc/dpp.css: $(CACHE)/dpp.css
+	@mkdir -p $(dir $@)
+	cp $< $@
 
-.PHONY: test
-test: $(BUILD)/pp-test.output test/pp-test.ref
-	diff -b -B $^
-	@echo "Test passed!"
-
-$(BUILD)/pp-test.output: $(PP) doc/pp.css
-$(BUILD)/pp-test.output: test/pp-test.md test/pp-test.i
-	@mkdir -p $(BUILD)/img
-	TESTENVVAR=42 ./$(PP) -en -html $< > $@
-	pandoc -S --toc -c doc/pp.css -f markdown -t html5 $@ -o $(@:.output=.html)
-
-.PHONY: ref
-ref: $(BUILD)/pp-test.output
-	meld $< test/pp-test.ref
