@@ -133,7 +133,7 @@ doc/gpp.html: $(GPP)
 #####################################################################
 
 PLANTUML = plantuml
-PLANTUML_URL = http://heanet.dl.sourceforge.net/project/plantuml/$(PLANTUML).jar
+PLANTUML_URL = http://sourceforge.net/projects/plantuml/files/$(PLANTUML).jar/download
 
 DITAA_VERSION = 0.9
 DITAA = ditaa0_9
